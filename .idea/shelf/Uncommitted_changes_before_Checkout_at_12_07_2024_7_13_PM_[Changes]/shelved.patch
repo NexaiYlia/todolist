@@ -1,0 +1,407 @@
+Index: todolist/src/main/java/com/nexai/todolist/entity/Task.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.nexai.todolist.entity;\r\n\r\nimport javax.persistence.*;\r\n\r\nimport jakarta.validation.constraints.NotNull;\r\nimport lombok.AllArgsConstructor;\r\nimport lombok.Getter;\r\nimport lombok.RequiredArgsConstructor;\r\nimport lombok.Setter;\r\n\r\nimport java.time.LocalDate;\r\n\r\n@Entity\r\n@Setter\r\n@Getter\r\n@AllArgsConstructor\r\n@RequiredArgsConstructor\r\npublic class Task {\r\n\r\n    @Id\r\n    @GeneratedValue(strategy = GenerationType.IDENTITY)\r\n    private Long id;\r\n    @NotNull\r\n    private String title;\r\n    private String description;\r\n\r\n    private LocalDate createdDate;\r\n\r\n    private LocalDate dueDate;\r\n\r\n    private String status = \"it's not done\";\r\n}\r\n\r\n
+===================================================================
+diff --git a/todolist/src/main/java/com/nexai/todolist/entity/Task.java b/todolist/src/main/java/com/nexai/todolist/entity/Task.java
+--- a/todolist/src/main/java/com/nexai/todolist/entity/Task.java	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/java/com/nexai/todolist/entity/Task.java	(date 1733616436077)
+@@ -1,33 +1,33 @@
+ package com.nexai.todolist.entity;
+ 
+-import javax.persistence.*;
+-
++import jakarta.persistence.*;
+ import jakarta.validation.constraints.NotNull;
+-import lombok.AllArgsConstructor;
+-import lombok.Getter;
+-import lombok.RequiredArgsConstructor;
+-import lombok.Setter;
++import lombok.*;
+ 
+ import java.time.LocalDate;
+ 
+-@Entity
+-@Setter
+-@Getter
++@Data
++@NoArgsConstructor
+ @AllArgsConstructor
+-@RequiredArgsConstructor
++@Builder
++@Getter
++@Setter
++@Entity(name = "tasks")
+ public class Task {
+ 
+     @Id
+     @GeneratedValue(strategy = GenerationType.IDENTITY)
+     private Long id;
++    @Column
+     @NotNull
+     private String title;
++    @Column
+     private String description;
+-
++    @Column(name = "created_date")
+     private LocalDate createdDate;
+-
++    @Column(name = "due_date")
+     private LocalDate dueDate;
+-
+-    private String status = "it's not done";
++    @Column
++    private Boolean status = false;
+ }
+ 
+Index: todolist/src/main/resources/application.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>spring.application.name=todolist\r\nspring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE\r\nspring.datasource.driverClassName=org.h2.Driver\r\nspring.datasource.username=sa\r\nspring.datasource.password=password\r\nspring.jpa.hibernate.ddl-auto=update\r\nspring.h2.console.enabled=true\r\nspring.jpa.show-sql=true\r\n
+===================================================================
+diff --git a/todolist/src/main/resources/application.properties b/todolist/src/main/resources/application.properties
+--- a/todolist/src/main/resources/application.properties	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/resources/application.properties	(date 1733616403815)
+@@ -1,8 +1,13 @@
+-spring.application.name=todolist
+-spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+-spring.datasource.driverClassName=org.h2.Driver
+-spring.datasource.username=sa
+-spring.datasource.password=password
+-spring.jpa.hibernate.ddl-auto=update
+-spring.h2.console.enabled=true
++spring.datasource.url=jdbc:postgresql://localhost:5432/todolist
++spring.datasource.username=root
++spring.datasource.password=root
+ spring.jpa.show-sql=true
++spring.jpa.properties.hibernate.format_sql==true
++spring.web.resources.add-mappings=true
++
++server.error.whitelabel.enabled=false
++spring.mvc.view.prefix=/WEB-INF/views/
++spring.mvc.view.suffix=.jsp
++
++spring.main.web-application-type=reactive
++
+Index: todolist/src/main/java/com/nexai/todolist/service/impl/TaskServiceImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.nexai.todolist.service.impl;\r\n\r\nimport com.nexai.todolist.entity.Task;\r\nimport com.nexai.todolist.exceptions.ServiceException;\r\nimport com.nexai.todolist.repository.TaskRepository;\r\n\r\nimport com.nexai.todolist.service.TaskService;\r\nimport org.springframework.beans.factory.annotation.Autowired;\r\nimport org.springframework.transaction.annotation.Transactional;\r\n\r\nimport java.time.LocalDate;\r\nimport java.util.List;\r\nimport java.util.Optional;\r\n\r\npublic class TaskServiceImpl implements TaskService {\r\n    @Autowired\r\n    private TaskRepository taskRepository;\r\n\r\n    @Override\r\n    @Transactional\r\n    public Task createTask(Task task) {\r\n        task.setCreatedDate(LocalDate.now());\r\n        return taskRepository.save(task);\r\n    }\r\n\r\n    @Override\r\n    public List<Task> getAllTasks() {\r\n        return taskRepository.findAll();\r\n    }\r\n\r\n    @Override\r\n    public List<Task> getTasksByStatus(String status) {\r\n        return taskRepository.findByStatus(status);\r\n    }\r\n\r\n    @Override\r\n    public Optional<Task> getTaskById(Long id) {\r\n        return taskRepository.findById(id);\r\n    }\r\n\r\n    @Override\r\n    @Transactional\r\n    public Task updateTask(Long id, Task taskDetails) throws ServiceException {\r\n        Task task = taskRepository.findById(id)\r\n                .orElseThrow(() -> new ServiceException(\"The task is not found\"));\r\n\r\n        task.setTitle(taskDetails.getTitle());\r\n        task.setDescription(taskDetails.getDescription());\r\n        task.setStatus(taskDetails.getStatus());\r\n\r\n        return taskRepository.save(task);\r\n    }\r\n\r\n    @Override\r\n    @Transactional\r\n    public void deleteTask(Long id) throws ServiceException {\r\n        Task task = taskRepository.findById(id)\r\n                .orElseThrow(() -> new ServiceException(\"The task is not found\"));\r\n\r\n        taskRepository.delete(task);\r\n    }\r\n}\r\n
+===================================================================
+diff --git a/todolist/src/main/java/com/nexai/todolist/service/impl/TaskServiceImpl.java b/todolist/src/main/java/com/nexai/todolist/service/impl/TaskServiceImpl.java
+--- a/todolist/src/main/java/com/nexai/todolist/service/impl/TaskServiceImpl.java	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/java/com/nexai/todolist/service/impl/TaskServiceImpl.java	(date 1733612824061)
+@@ -29,7 +29,7 @@
+     }
+ 
+     @Override
+-    public List<Task> getTasksByStatus(String status) {
++    public List<Task> getTasksByStatus(Boolean status) {
+         return taskRepository.findByStatus(status);
+     }
+ 
+Index: todolist/pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\r\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\r\n    <modelVersion>4.0.0</modelVersion>\r\n    <parent>\r\n        <groupId>org.springframework.boot</groupId>\r\n        <artifactId>spring-boot-starter-parent</artifactId>\r\n        <version>3.4.0</version>\r\n        <relativePath/> <!-- lookup parent from repository -->\r\n    </parent>\r\n    <groupId>com.nexai</groupId>\r\n    <artifactId>todolist</artifactId>\r\n    <version>0.0.1-SNAPSHOT</version>\r\n    <name>todolist</name>\r\n    <description>RESTful API for managing To-Do List tasks</description>\r\n    <url/>\r\n    <licenses>\r\n        <license/>\r\n    </licenses>\r\n    <developers>\r\n        <developer/>\r\n    </developers>\r\n    <scm>\r\n        <connection/>\r\n        <developerConnection/>\r\n        <tag/>\r\n        <url/>\r\n    </scm>\r\n    <properties>\r\n        <java.version>17</java.version>\r\n    </properties>\r\n    <dependencies>\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-data-jpa</artifactId>\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>org.projectlombok</groupId>\r\n            <artifactId>lombok</artifactId>\r\n            <optional>true</optional>\r\n        </dependency>\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-test</artifactId>\r\n            <scope>test</scope>\r\n        </dependency>\r\n\r\n        <!-- https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api -->\r\n        <dependency>\r\n            <groupId>javax.persistence</groupId>\r\n            <artifactId>javax.persistence-api</artifactId>\r\n            <version>2.2</version>\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-web</artifactId>\r\n        </dependency>\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-data-jpa</artifactId>\r\n        </dependency>\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-webflux</artifactId>\r\n        </dependency>\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-validation</artifactId>\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>com.h2database</groupId>\r\n            <artifactId>h2</artifactId>\r\n            <scope>runtime</scope>\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>org.apache.logging.log4j</groupId>\r\n            <artifactId>log4j-api</artifactId>\r\n            <version>2.20.0</version> <!-- Убедитесь, что версия актуальна -->\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>org.apache.logging.log4j</groupId>\r\n            <artifactId>log4j-core</artifactId>\r\n            <version>2.20.0</version> <!-- Убедитесь, что версия актуальна -->\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter</artifactId>\r\n        </dependency>\r\n\r\n\r\n        <!-- https://mvnrepository.com/artifact/jakarta.persistence/jakarta.persistence-api -->\r\n        <dependency>\r\n            <groupId>jakarta.persistence</groupId>\r\n            <artifactId>jakarta.persistence-api</artifactId>\r\n            <version>3.1.0</version>\r\n        </dependency>\r\n\r\n        <!-- https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api -->\r\n        <dependency>\r\n            <groupId>jakarta.validation</groupId>\r\n            <artifactId>jakarta.validation-api</artifactId>\r\n            <version>3.1.0</version>\r\n        </dependency>\r\n\r\n        <dependency>\r\n            <groupId>io.springfox</groupId>\r\n            <artifactId>springfox-boot-starter</artifactId>\r\n            <version>3.0.0</version>\r\n        </dependency>\r\n\r\n\r\n        <dependency>\r\n            <groupId>org.springframework.boot</groupId>\r\n            <artifactId>spring-boot-starter-test</artifactId>\r\n            <scope>test</scope>\r\n        </dependency>\r\n\r\n\r\n    </dependencies>\r\n\r\n    <build>\r\n        <plugins>\r\n            <plugin>\r\n                <groupId>org.springframework.boot</groupId>\r\n                <artifactId>spring-boot-maven-plugin</artifactId>\r\n                <configuration>\r\n                    <excludes>\r\n                        <exclude>\r\n                            <groupId>org.projectlombok</groupId>\r\n                            <artifactId>lombok</artifactId>\r\n                        </exclude>\r\n                    </excludes>\r\n                </configuration>\r\n            </plugin>\r\n        </plugins>\r\n    </build>\r\n\r\n</project>\r\n
+===================================================================
+diff --git a/todolist/pom.xml b/todolist/pom.xml
+--- a/todolist/pom.xml	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/pom.xml	(date 1733616665037)
+@@ -8,120 +8,130 @@
+         <version>3.4.0</version>
+         <relativePath/> <!-- lookup parent from repository -->
+     </parent>
++
+     <groupId>com.nexai</groupId>
+     <artifactId>todolist</artifactId>
+     <version>0.0.1-SNAPSHOT</version>
+     <name>todolist</name>
+     <description>RESTful API for managing To-Do List tasks</description>
+-    <url/>
+-    <licenses>
+-        <license/>
+-    </licenses>
+-    <developers>
+-        <developer/>
+-    </developers>
+-    <scm>
+-        <connection/>
+-        <developerConnection/>
+-        <tag/>
+-        <url/>
+-    </scm>
++
+     <properties>
+         <java.version>17</java.version>
++        <log4j.version>2.20.0</log4j.version>
+     </properties>
++
+     <dependencies>
++
+         <dependency>
+             <groupId>org.springframework.boot</groupId>
+             <artifactId>spring-boot-starter-data-jpa</artifactId>
+         </dependency>
++
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-web</artifactId>
++        </dependency>
++
++        <dependency>
++            <groupId>org.springframework.boot</groupId>
++            <artifactId>spring-boot-starter-validation</artifactId>
++        </dependency>
+ 
+         <dependency>
+             <groupId>org.projectlombok</groupId>
+             <artifactId>lombok</artifactId>
+             <optional>true</optional>
+         </dependency>
++
+         <dependency>
+             <groupId>org.springframework.boot</groupId>
+             <artifactId>spring-boot-starter-test</artifactId>
+             <scope>test</scope>
+         </dependency>
+ 
+-        <!-- https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api -->
+         <dependency>
+-            <groupId>javax.persistence</groupId>
+-            <artifactId>javax.persistence-api</artifactId>
+-            <version>2.2</version>
++            <groupId>org.postgresql</groupId>
++            <artifactId>postgresql</artifactId>
++            <version>42.6.0</version>
++            <scope>runtime</scope>
+         </dependency>
+ 
+         <dependency>
+-            <groupId>org.springframework.boot</groupId>
+-            <artifactId>spring-boot-starter-web</artifactId>
++            <groupId>com.h2database</groupId>
++            <artifactId>h2</artifactId>
++            <scope>runtime</scope>
+         </dependency>
++
+         <dependency>
+-            <groupId>org.springframework.boot</groupId>
+-            <artifactId>spring-boot-starter-data-jpa</artifactId>
++            <groupId>mysql</groupId>
++            <artifactId>mysql-connector-java</artifactId>
++            <version>8.0.33</version>
++            <scope>runtime</scope>
+         </dependency>
++
++
+         <dependency>
+-            <groupId>org.springframework.boot</groupId>
+-            <artifactId>spring-boot-starter-webflux</artifactId>
+-        </dependency>
+-        <dependency>
+-            <groupId>org.springframework.boot</groupId>
+-            <artifactId>spring-boot-starter-validation</artifactId>
++            <groupId>jakarta.persistence</groupId>
++            <artifactId>jakarta.persistence-api</artifactId>
++            <version>3.1.0</version>
+         </dependency>
+ 
+-        <dependency>
+-            <groupId>com.h2database</groupId>
+-            <artifactId>h2</artifactId>
+-            <scope>runtime</scope>
+-        </dependency>
+ 
+         <dependency>
+             <groupId>org.apache.logging.log4j</groupId>
+             <artifactId>log4j-api</artifactId>
+-            <version>2.20.0</version> <!-- Убедитесь, что версия актуальна -->
++            <version>${log4j.version}</version>
+         </dependency>
+-
+         <dependency>
+             <groupId>org.apache.logging.log4j</groupId>
+             <artifactId>log4j-core</artifactId>
+-            <version>2.20.0</version> <!-- Убедитесь, что версия актуальна -->
++            <version>${log4j.version}</version>
+         </dependency>
+ 
++
+         <dependency>
+-            <groupId>org.springframework.boot</groupId>
+-            <artifactId>spring-boot-starter</artifactId>
++            <groupId>io.springfox</groupId>
++            <artifactId>springfox-boot-starter</artifactId>
++            <version>3.0.0</version>
+         </dependency>
+ 
+ 
+-        <!-- https://mvnrepository.com/artifact/jakarta.persistence/jakarta.persistence-api -->
+         <dependency>
+-            <groupId>jakarta.persistence</groupId>
+-            <artifactId>jakarta.persistence-api</artifactId>
+-            <version>3.1.0</version>
++            <groupId>org.flywaydb</groupId>
++            <artifactId>flyway-core</artifactId>
+         </dependency>
+ 
+-        <!-- https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api -->
++
+         <dependency>
+-            <groupId>jakarta.validation</groupId>
+-            <artifactId>jakarta.validation-api</artifactId>
+-            <version>3.1.0</version>
++            <groupId>org.aspectj</groupId>
++            <artifactId>aspectjweaver</artifactId>
++            <version>1.9.22.1</version>
++            <scope>runtime</scope>
+         </dependency>
+ 
+         <dependency>
+-            <groupId>io.springfox</groupId>
+-            <artifactId>springfox-boot-starter</artifactId>
+-            <version>3.0.0</version>
++            <groupId>org.aspectj</groupId>
++            <artifactId>aspectjrt</artifactId>
++            <version>1.9.22</version>
++        </dependency>
++
++        <dependency>
++            <groupId>org.aspectj</groupId>
++            <artifactId>aspectjweaver</artifactId>
++            <version>1.9.22</version>
++            <scope>runtime</scope>
+         </dependency>
+ 
+-
+         <dependency>
+             <groupId>org.springframework.boot</groupId>
+-            <artifactId>spring-boot-starter-test</artifactId>
+-            <scope>test</scope>
++            <artifactId>spring-boot-starter-webflux</artifactId>
++        </dependency>
++
++        <dependency>
++            <groupId>io.projectreactor</groupId>
++            <artifactId>reactor-core</artifactId>
++            <version>3.6.10</version>
+         </dependency>
+-
+-
+     </dependencies>
+ 
+     <build>
+@@ -136,6 +146,19 @@
+                             <artifactId>lombok</artifactId>
+                         </exclude>
+                     </excludes>
++                </configuration>
++            </plugin>
++            <plugin>
++                <groupId>org.flywaydb</groupId>
++                <artifactId>flyway-maven-plugin</artifactId>
++                <version>8.0.3</version>
++                <configuration>
++                    <locations>
++                        <location>filesystem:src\main\resources</location>
++                    </locations>
++                    <url>jdbc:postgresql://localhost:5432/todolist</url>
++                    <user>root</user>
++                    <password>root</password>
+                 </configuration>
+             </plugin>
+         </plugins>
+Index: todolist/src/main/java/com/nexai/todolist/controller/HolidayController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.nexai.todolist.controller;\r\n\r\n\r\nimport com.nexai.todolist.entity.HolidayResponse;\r\nimport com.nexai.todolist.service.impl.HolidayServiceImpl;\r\nimport org.springframework.web.bind.annotation.GetMapping;\r\nimport org.springframework.web.bind.annotation.PathVariable;\r\nimport org.springframework.web.bind.annotation.RequestMapping;\r\nimport org.springframework.web.bind.annotation.RestController;\r\nimport reactor.core.publisher.Mono;\r\n\r\nimport java.util.List;\r\n\r\n@RestController\r\n@RequestMapping(\"/api/holidays\")\r\npublic class HolidayController {\r\n\r\n    private final HolidayServiceImpl holidayService;\r\n\r\n    public HolidayController(HolidayServiceImpl holidayService) {\r\n        this.holidayService = holidayService;\r\n    }\r\n\r\n    @GetMapping(\"/{countryCode}\")\r\n    public Mono<List<HolidayResponse>> getHolidays(@PathVariable String countryCode) {\r\n        return holidayService.getHolidays(countryCode);\r\n    }\r\n}\r\n
+===================================================================
+diff --git a/todolist/src/main/java/com/nexai/todolist/controller/HolidayController.java b/todolist/src/main/java/com/nexai/todolist/controller/HolidayController.java
+--- a/todolist/src/main/java/com/nexai/todolist/controller/HolidayController.java	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/java/com/nexai/todolist/controller/HolidayController.java	(date 1733616357171)
+@@ -7,9 +7,8 @@
+ import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.RestController;
+-import reactor.core.publisher.Mono;
+-
+ import java.util.List;
++import reactor.core.publisher.Mono;
+ 
+ @RestController
+ @RequestMapping("/api/holidays")
+Index: todolist/src/main/java/com/nexai/todolist/repository/TaskRepository.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.nexai.todolist.repository;\r\n\r\nimport com.nexai.todolist.entity.Task;\r\nimport org.springframework.data.jpa.repository.JpaRepository;\r\n\r\nimport java.util.List;\r\n\r\npublic interface TaskRepository extends JpaRepository<Task, Long> {\r\n    List<Task> findByStatus(String status);\r\n}\r\n
+===================================================================
+diff --git a/todolist/src/main/java/com/nexai/todolist/repository/TaskRepository.java b/todolist/src/main/java/com/nexai/todolist/repository/TaskRepository.java
+--- a/todolist/src/main/java/com/nexai/todolist/repository/TaskRepository.java	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/java/com/nexai/todolist/repository/TaskRepository.java	(date 1733612824101)
+@@ -6,5 +6,5 @@
+ import java.util.List;
+ 
+ public interface TaskRepository extends JpaRepository<Task, Long> {
+-    List<Task> findByStatus(String status);
++    List<Task> findByStatus(boolean status);
+ }
+Index: todolist/src/main/java/com/nexai/todolist/controller/TaskController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.nexai.todolist.controller;\r\n\r\nimport com.nexai.todolist.entity.Task;\r\nimport com.nexai.todolist.service.impl.TaskServiceImpl;\r\nimport jakarta.validation.Valid;\r\nimport org.springframework.beans.factory.annotation.Autowired;\r\nimport org.springframework.web.bind.annotation.*;\r\n\r\nimport java.time.LocalDate;\r\nimport java.util.List;\r\n\r\n@RestController\r\n@RequestMapping(\"/api/tasks\")\r\npublic class TaskController {\r\n\r\n    @Autowired\r\n    private TaskServiceImpl taskService;\r\n\r\n\r\n    @PostMapping\r\n    public Task createTask(@Valid @RequestBody Task task) {\r\n\r\n        validateDueDate(task.getDueDate());\r\n        return taskService.createTask(task);\r\n    }\r\n\r\n    @GetMapping\r\n    public List<Task> getAllTasks(@RequestParam(required = false) String status) {\r\n        if (status != null) {\r\n            return taskService.getTasksByStatus(status);\r\n        }\r\n        return taskService.getAllTasks();\r\n    }\r\n\r\n    @GetMapping(\"/{id}\")\r\n    public Task getTaskById(@PathVariable Long id) throws Exception {\r\n        return taskService.getTaskById(id)\r\n                .orElseThrow(() -> new Exception(\"The task is not found!\"));\r\n    }\r\n\r\n    @PutMapping(\"/{id}\")\r\n    public Task updateTask(@PathVariable Long id, @Valid @RequestBody Task taskDetails) throws Exception {\r\n        validateDueDate(taskDetails.getDueDate());\r\n        return taskService.updateTask(id, taskDetails);\r\n    }\r\n\r\n    @DeleteMapping(\"/{id}\")\r\n    public void deleteTask(@PathVariable Long id) throws Exception {\r\n        taskService.deleteTask(id);\r\n    }\r\n\r\n\r\n    private void validateDueDate(LocalDate dueDate) {\r\n        if (isHolidayOrWeekend(dueDate)) {\r\n            throw new IllegalArgumentException(\"Choose another day \" + getNextValidDate(dueDate));\r\n        }\r\n    }\r\n\r\n    private boolean isHolidayOrWeekend(LocalDate date) {\r\n        return date.getDayOfWeek().getValue() >= 6;\r\n    }\r\n\r\n    private LocalDate getNextValidDate(LocalDate date) {\r\n        LocalDate nextDay = date.plusDays(1);\r\n        while (nextDay.getDayOfWeek().getValue() >= 6) {\r\n            nextDay = nextDay.plusDays(1);\r\n        }\r\n        return nextDay;\r\n    }\r\n}\r\n\r\n
+===================================================================
+diff --git a/todolist/src/main/java/com/nexai/todolist/controller/TaskController.java b/todolist/src/main/java/com/nexai/todolist/controller/TaskController.java
+--- a/todolist/src/main/java/com/nexai/todolist/controller/TaskController.java	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/java/com/nexai/todolist/controller/TaskController.java	(date 1733613630727)
+@@ -3,6 +3,7 @@
+ import com.nexai.todolist.entity.Task;
+ import com.nexai.todolist.service.impl.TaskServiceImpl;
+ import jakarta.validation.Valid;
++import lombok.RequiredArgsConstructor;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.web.bind.annotation.*;
+ 
+@@ -11,21 +12,22 @@
+ 
+ @RestController
+ @RequestMapping("/api/tasks")
++@RequiredArgsConstructor
+ public class TaskController {
+ 
+     @Autowired
+     private TaskServiceImpl taskService;
+ 
+ 
+-    @PostMapping
++    @PostMapping(value = "/update")
+     public Task createTask(@Valid @RequestBody Task task) {
+ 
+         validateDueDate(task.getDueDate());
+         return taskService.createTask(task);
+     }
+ 
+-    @GetMapping
+-    public List<Task> getAllTasks(@RequestParam(required = false) String status) {
++    @GetMapping(value = "/cars")
++    public List<Task> getAllTasks(@RequestParam(required = false) Boolean status) {
+         if (status != null) {
+             return taskService.getTasksByStatus(status);
+         }
+Index: todolist/src/main/java/com/nexai/todolist/service/TaskService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.nexai.todolist.service;\r\n\r\nimport com.nexai.todolist.entity.Task;\r\n\r\nimport java.util.List;\r\nimport java.util.Optional;\r\n\r\npublic interface TaskService {\r\n\r\n    Task createTask(Task task);\r\n\r\n    List<Task> getAllTasks();\r\n\r\n    List<Task> getTasksByStatus(String status);\r\n\r\n    Optional<Task> getTaskById(Long id);\r\n\r\n    Task updateTask(Long id, Task taskDetails) throws Exception;\r\n\r\n    void deleteTask(Long id) throws Exception;\r\n}\r\n
+===================================================================
+diff --git a/todolist/src/main/java/com/nexai/todolist/service/TaskService.java b/todolist/src/main/java/com/nexai/todolist/service/TaskService.java
+--- a/todolist/src/main/java/com/nexai/todolist/service/TaskService.java	(revision 119e9df606224ac6d46198586c16e4a905ac27e0)
++++ b/todolist/src/main/java/com/nexai/todolist/service/TaskService.java	(date 1733612824043)
+@@ -11,7 +11,7 @@
+ 
+     List<Task> getAllTasks();
+ 
+-    List<Task> getTasksByStatus(String status);
++    List<Task> getTasksByStatus(Boolean status);
+ 
+     Optional<Task> getTaskById(Long id);
+ 
